@@ -1,4 +1,4 @@
-import { AnalysisResponse, TicketCategory, TicketPriority, TicketSentiment, EscalationType, ActionLog } from './types';
+import { AnalysisResponse, TicketCategory, TicketPriority, TicketSentiment, EscalationType, ActionLog, EscalationRule } from './types';
 
 // Default mock response requested in specs
 export const DEFAULT_MOCK_RESPONSE: AnalysisResponse = {
@@ -362,6 +362,58 @@ export const INITIAL_ACTION_LOGS: ActionLog[] = [
     customerIssue: "Do you offer volume discounts for enterprise teams of more than 50 users?",
     aiRecommendation: "Thank you for contacting customer support. We have received your query and are reviewing it. A customer support representative will get back to you with detailed assistance shortly.",
     sentiment: "Neutral"
+  }
+];
+
+export const DEFAULT_ESCALATION_RULES: EscalationRule[] = [
+  {
+    id: "rule-angry",
+    name: "Angry Customer",
+    description: "Escalate tickets containing customer frustration, angry terms, or severe disappointment to prevent customer churn.",
+    weight: 6,
+    status: "Active"
+  },
+  {
+    id: "rule-payment",
+    name: "Payment Dispute",
+    description: "Escalate refund-related issues involving duplicate charges, payment failures, or unauthorized billing discrepancies.",
+    weight: 8,
+    status: "Active"
+  },
+  {
+    id: "rule-fraud",
+    name: "Fraud Concern",
+    description: "Escalate warnings regarding scams, compromised security keys, hacked billing details, or suspicious account transactions.",
+    weight: 10,
+    status: "Active"
+  },
+  {
+    id: "rule-repeat",
+    name: "Repeat Complaint",
+    description: "Escalate issues where customers reference unresolved prior tickets, multiple attempts, or recurring service friction.",
+    weight: 5,
+    status: "Active"
+  },
+  {
+    id: "rule-severity",
+    name: "High Severity Issue",
+    description: "Escalate server failures (API 500 exceptions), service crashes, blocker bugs, outages, and high priority tickets.",
+    weight: 9,
+    status: "Active"
+  },
+  {
+    id: "rule-security",
+    name: "Security Risk",
+    description: "Escalate accounts locked out due to security validation failures, credential blocks, or hacking threats.",
+    weight: 10,
+    status: "Active"
+  },
+  {
+    id: "rule-nopath",
+    name: "No Resolution Path Available",
+    description: "Escalate complex support requests with no available standard diagnostics checklist or automated resolution template.",
+    weight: 4,
+    status: "Active"
   }
 ];
 

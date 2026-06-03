@@ -7,8 +7,9 @@ import MiddlePanel from '@/components/MiddlePanel';
 import RightPanel from '@/components/RightPanel';
 import ResolutionHistory from '@/components/ResolutionHistory';
 import ResolutionDetailsDrawer from '@/components/ResolutionDetailsDrawer';
-import { AnalysisResponse, ActionLog, TicketCategory, TicketPriority, EscalationType } from '@/lib/types';
-import { INITIAL_ACTION_LOGS } from '@/lib/mockData';
+import EscalationRulesConfig from '@/components/EscalationRulesConfig';
+import { AnalysisResponse, ActionLog, TicketCategory, TicketPriority, EscalationType, EscalationRule } from '@/lib/types';
+import { INITIAL_ACTION_LOGS, DEFAULT_ESCALATION_RULES } from '@/lib/mockData';
 import { X, AlertCircle, CheckCircle, Info } from 'lucide-react';
 
 interface Toast {
@@ -46,8 +47,11 @@ export default function Home() {
   const [suggestedResponseText, setSuggestedResponseText] = useState('');
   const [isEditingResponse, setIsEditingResponse] = useState(false);
 
-  // Active Tab state (AI Copilot vs Resolution History Dashboard)
-  const [activeTab, setActiveTab] = useState<'copilot' | 'history'>('copilot');
+  // Active Tab state (AI Copilot vs Resolution History Dashboard vs Escalation Rules)
+  const [activeTab, setActiveTab] = useState<'copilot' | 'history' | 'rules'>('copilot');
+
+  // Escalation Rules configuration
+  const [rules, setRules] = useState<EscalationRule[]>(DEFAULT_ESCALATION_RULES);
 
   // Selected audit log for detail drawer
   const [selectedHistoryLog, setSelectedHistoryLog] = useState<ActionLog | null>(null);
@@ -205,6 +209,19 @@ export default function Home() {
     setIsEditingResponse(false);
     setActiveAnalysisId(null);
     addToast('Dashboard Cleared', 'Resetting active workspace values.', 'info');
+  };
+
+  // Rules configuration handlers
+  const handleUpdateRule = (id: string, updated: Partial<EscalationRule>) => {
+    setRules((prev) =>
+      prev.map((rule) => (rule.id === id ? { ...rule, ...updated } : rule))
+    );
+    addToast('Rule Updated', 'Escalation routing thresholds updated successfully.', 'info');
+  };
+
+  const handleResetRules = () => {
+    setRules(DEFAULT_ESCALATION_RULES);
+    addToast('Rules Reset', 'Default escalation routing thresholds restored.', 'info');
   };
 
   // 4. Copy Response Clipboard
@@ -454,10 +471,11 @@ export default function Home() {
             isEditingResponse={isEditingResponse}
             lastAgentAction={lastAgentAction}
             analyzedText={analyzedText}
+            rulesConfig={rules}
           />
 
         </main>
-      ) : (
+      ) : activeTab === 'history' ? (
         /* Resolution History Operations Dashboard */
         <ResolutionHistory
           actionLogs={actionLogs}
@@ -466,6 +484,13 @@ export default function Home() {
             addToast('History Cleared', 'All audit logs have been successfully cleared.', 'info');
           }}
           onLogClick={(log) => setSelectedHistoryLog(log)}
+        />
+      ) : (
+        /* Escalation Rules Configuration Screen */
+        <EscalationRulesConfig
+          rules={rules}
+          onUpdateRule={handleUpdateRule}
+          onResetRules={handleResetRules}
         />
       )}
 

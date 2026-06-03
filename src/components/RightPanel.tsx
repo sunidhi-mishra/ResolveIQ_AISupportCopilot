@@ -66,8 +66,8 @@ export default function RightPanel({
         {/* Actions Skeleton */}
         <div className="relative overflow-hidden w-full h-[190px] bg-white border border-slate-200 rounded-2xl p-5 shimmer">
           <div className="w-28 h-3.5 bg-slate-100 rounded-full mb-6" />
-          <div className="w-full h-10 bg-slate-150 rounded-xl mb-3" />
-          <div className="w-full h-10 bg-slate-150 rounded-xl" />
+          <div className="w-full h-10 bg-slate-100 rounded-xl mb-3" />
+          <div className="w-full h-10 bg-slate-100 rounded-xl" />
         </div>
       </div>
     );

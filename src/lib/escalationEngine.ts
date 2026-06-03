@@ -1,4 +1,4 @@
-import { TicketCategory, TicketPriority, TicketSentiment, EscalationType } from './types';
+import { TicketCategory, TicketPriority, TicketSentiment, EscalationType, EscalationRule } from './types';
 
 export interface EscalationTriggerResult {
   name: string;
@@ -20,13 +20,19 @@ export function evaluateEscalationRules(
   ticketText: string,
   category: TicketCategory,
   priority: TicketPriority,
-  sentiment: TicketSentiment
+  sentiment: TicketSentiment,
+  rulesConfig?: EscalationRule[]
 ): EscalationEngineResult {
+  const isRuleActive = (ruleName: string) => {
+    if (!rulesConfig) return true;
+    const rule = rulesConfig.find(r => r.name === ruleName);
+    return rule ? rule.status === 'Active' : true;
+  };
   const text = ticketText.toLowerCase().trim();
   const triggers: EscalationTriggerResult[] = [];
 
   // 1. Angry Customer
-  const isAngry = sentiment === 'Angry' || text.includes('angry') || text.includes('furious') || text.includes('unacceptable') || text.includes('worst') || text.includes('terrible');
+  const isAngry = (sentiment === 'Angry' || text.includes('angry') || text.includes('furious') || text.includes('unacceptable') || text.includes('worst') || text.includes('terrible')) && isRuleActive('Angry Customer');
   triggers.push({
     name: 'Angry Customer',
     triggered: isAngry,
@@ -36,7 +42,7 @@ export function evaluateEscalationRules(
   });
 
   // 2. Payment Dispute
-  const isPaymentDispute = category === 'Payment Issue' || text.includes('refund') || text.includes('charge') || text.includes('billing') || text.includes('invoice') || text.includes('transaction') || text.includes('unauthorized transaction');
+  const isPaymentDispute = (category === 'Payment Issue' || text.includes('refund') || text.includes('charge') || text.includes('billing') || text.includes('invoice') || text.includes('transaction') || text.includes('unauthorized transaction')) && isRuleActive('Payment Dispute');
   triggers.push({
     name: 'Payment Dispute',
     triggered: isPaymentDispute,
@@ -46,7 +52,7 @@ export function evaluateEscalationRules(
   });
 
   // 3. Fraud Concern
-  const isFraud = text.includes('fraud') || text.includes('scam') || text.includes('stolen') || text.includes('hacked') || text.includes('phishing') || text.includes('unauthorized charge');
+  const isFraud = (text.includes('fraud') || text.includes('scam') || text.includes('stolen') || text.includes('hacked') || text.includes('phishing') || text.includes('unauthorized charge')) && isRuleActive('Fraud Concern');
   triggers.push({
     name: 'Fraud Concern',
     triggered: isFraud,
@@ -56,7 +62,7 @@ export function evaluateEscalationRules(
   });
 
   // 4. Repeat Complaint
-  const isRepeat = text.includes('again') || text.includes('second time') || text.includes('multiple times') || text.includes('already reported') || text.includes('still not working') || text.includes('previously');
+  const isRepeat = (text.includes('again') || text.includes('second time') || text.includes('multiple times') || text.includes('already reported') || text.includes('still not working') || text.includes('previously')) && isRuleActive('Repeat Complaint');
   triggers.push({
     name: 'Repeat Complaint',
     triggered: isRepeat,
@@ -66,7 +72,7 @@ export function evaluateEscalationRules(
   });
 
   // 5. High Severity Issue
-  const isHighSeverity = priority === 'High' || text.includes('outage') || text.includes('blocking') || text.includes('500') || text.includes('crash') || text.includes('down') || text.includes('critical');
+  const isHighSeverity = (priority === 'High' || text.includes('outage') || text.includes('blocking') || text.includes('500') || text.includes('crash') || text.includes('down') || text.includes('critical')) && isRuleActive('High Severity Issue');
   triggers.push({
     name: 'High Severity Issue',
     triggered: isHighSeverity,
@@ -76,7 +82,7 @@ export function evaluateEscalationRules(
   });
 
   // 6. Security Risk
-  const isSecurity = category === 'Account Access' || text.includes('locked') || text.includes('unauthorized access') || text.includes('hack') || text.includes('password reset') || text.includes('security check') || text.includes('credentials') || text.includes('2fa');
+  const isSecurity = (category === 'Account Access' || text.includes('locked') || text.includes('unauthorized access') || text.includes('hack') || text.includes('password reset') || text.includes('security check') || text.includes('credentials') || text.includes('2fa')) && isRuleActive('Security Risk');
   triggers.push({
     name: 'Security Risk',
     triggered: isSecurity,
@@ -86,7 +92,7 @@ export function evaluateEscalationRules(
   });
 
   // 7. No Resolution Path Available
-  const isNoPath = (category === 'General Inquiry' && priority === 'Low' && text.length > 500) || text.includes('not sure how') || text.includes('no option') || text.includes('confused') || text.includes('cannot resolve') || text.includes('no troubleshooting');
+  const isNoPath = ((category === 'General Inquiry' && priority === 'Low' && text.length > 500) || text.includes('not sure how') || text.includes('no option') || text.includes('confused') || text.includes('cannot resolve') || text.includes('no troubleshooting')) && isRuleActive('No Resolution Path Available');
   triggers.push({
     name: 'No Resolution Path Available',
     triggered: isNoPath,

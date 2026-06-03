@@ -91,7 +91,7 @@ export default function ResolutionDetailsDrawer({ log, onClose }: ResolutionDeta
         {/* Drawer Header */}
         <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-100 flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <span className="text-[10px] font-black tracking-wider uppercase bg-slate-150 px-2 py-0.5 rounded-md text-slate-700 border border-slate-200">
+            <span className="text-[10px] font-black tracking-wider uppercase bg-slate-100 px-2 py-0.5 rounded-md text-slate-700 border border-slate-200">
               AUDIT RECORD
             </span>
             <h2 className="text-sm font-extrabold text-slate-800">

@@ -1,9 +1,9 @@
 import React from 'react';
-import { Sparkles, History } from 'lucide-react';
+import { Sparkles, History, Sliders } from 'lucide-react';
 
 interface HeaderProps {
-  activeTab: 'copilot' | 'history';
-  setActiveTab: (tab: 'copilot' | 'history') => void;
+  activeTab: 'copilot' | 'history' | 'rules';
+  setActiveTab: (tab: 'copilot' | 'history' | 'rules') => void;
   historyCount: number;
 }
 
@@ -52,6 +52,18 @@ export default function Header({ activeTab, setActiveTab, historyCount }: Header
               {historyCount}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setActiveTab('rules')}
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer relative ${
+            activeTab === 'rules'
+              ? 'bg-white text-indigo-650 shadow-xs'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+          type="button"
+        >
+          <Sliders size={13} className={activeTab === 'rules' ? 'text-indigo-500' : 'text-slate-400'} />
+          Escalation Rules
         </button>
       </div>
       
