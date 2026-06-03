@@ -114,14 +114,34 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ticketText }),
+        body: JSON.stringify({ ticket: ticketText }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to analyze ticket');
       }
 
-      const data: AnalysisResponse = await response.json();
+      const rawData = await response.json();
+      
+      // Map new schema format to frontend AnalysisResponse format
+      const data: AnalysisResponse = {
+        summary: rawData.summary || '',
+        category: rawData.category || 'General Inquiry',
+        priority: rawData.priority || 'Low',
+        sentiment: rawData.sentiment || 'Neutral',
+        categoryReason: rawData.reasoning?.category || '',
+        priorityReason: rawData.reasoning?.priority || '',
+        sentimentReason: rawData.reasoning?.sentiment || '',
+        suggestedResponse: rawData.suggested_response || '',
+        escalation: rawData.escalation?.recommended
+          ? (rawData.escalation.team === 'Specialist Team' ? 'Escalate to Specialist Team' : 'Escalate to Tier 2')
+          : 'No Escalation Required',
+        escalationReason: rawData.escalation?.reason || '',
+        categoryConfidence: rawData.confidence?.category ?? 80,
+        priorityConfidence: rawData.confidence?.priority ?? 80,
+        sentimentConfidence: rawData.confidence?.sentiment ?? 80,
+        responseConfidence: rawData.confidence?.response ?? 80,
+      };
       
       // Calculate simple tone variations dynamically
       const variations = generateToneVariations(data.suggestedResponse, data.category);

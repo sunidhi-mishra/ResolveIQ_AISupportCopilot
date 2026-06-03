@@ -1,12 +1,9 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { AnalysisResponse } from './types';
 import { getMockAnalysis } from './mockData';
 
 // Initialize the Google Gen AI SDK client
-// We read the key from process.env.GEMINI_API_KEY
 const apiKey = process.env.GEMINI_API_KEY;
 
-// Only instantiate GoogleGenAI client if apiKey is defined
 let aiClient: GoogleGenAI | null = null;
 if (apiKey) {
   aiClient = new GoogleGenAI({ apiKey });
@@ -18,7 +15,7 @@ const analysisSchema = {
   properties: {
     summary: {
       type: Type.STRING,
-      description: "A brief, one-sentence summary of the customer's problem or inquiry.",
+      description: "A concise summary of the support ticket, 2-3 sentences maximum.",
     },
     category: {
       type: Type.STRING,
@@ -35,57 +32,74 @@ const analysisSchema = {
     priority: {
       type: Type.STRING,
       enum: ["Low", "Medium", "High"],
-      description: "Calculated urgency level based on the customer problem severity.",
+      description: "Calculated priority level based on the customer problem severity.",
     },
     sentiment: {
       type: Type.STRING,
       enum: ["Neutral", "Frustrated", "Angry", "Satisfied"],
       description: "The calculated customer sentiment of the support ticket.",
     },
-    categoryReason: {
+    suggested_response: {
       type: Type.STRING,
-      description: "A concise 1-2 sentence explanation of why the support ticket was classified into this category.",
+      description: "A professional support agent response draft addressing the customer query.",
     },
-    priorityReason: {
-      type: Type.STRING,
-      description: "A concise 1-2 sentence explanation of why this priority level was assigned.",
+    confidence: {
+      type: Type.OBJECT,
+      properties: {
+        category: {
+          type: Type.INTEGER,
+          description: "Confidence percentage (1-100) in the category classification.",
+        },
+        priority: {
+          type: Type.INTEGER,
+          description: "Confidence percentage (1-100) in the priority assignment.",
+        },
+        sentiment: {
+          type: Type.INTEGER,
+          description: "Confidence percentage (1-100) in the sentiment detection.",
+        },
+        response: {
+          type: Type.INTEGER,
+          description: "Confidence percentage (1-100) in the suggested response quality.",
+        }
+      },
+      required: ["category", "priority", "sentiment", "response"]
     },
-    sentimentReason: {
-      type: Type.STRING,
-      description: "A concise 1-2 sentence explanation of why this sentiment level was detected.",
-    },
-    suggestedResponse: {
-      type: Type.STRING,
-      description: "A helpful, polite, and accurate support agent response draft addressing the customer query.",
+    reasoning: {
+      type: Type.OBJECT,
+      properties: {
+        category: {
+          type: Type.STRING,
+          description: "Explanation of why the issue was classified into this category.",
+        },
+        priority: {
+          type: Type.STRING,
+          description: "Explanation of why this priority level was assigned.",
+        },
+        sentiment: {
+          type: Type.STRING,
+          description: "Explanation of why this sentiment level was detected.",
+        }
+      },
+      required: ["category", "priority", "sentiment"]
     },
     escalation: {
-      type: Type.STRING,
-      enum: [
-        "No Escalation Required",
-        "Escalate to Tier 2",
-        "Escalate to Specialist Team"
-      ],
-      description: "Whether the issue can be resolved by front-line support or needs routing to a higher tier/team.",
-    },
-    escalationReason: {
-      type: Type.STRING,
-      description: "The logic, justification, or next steps explaining the escalation recommendation.",
-    },
-    categoryConfidence: {
-      type: Type.INTEGER,
-      description: "Confidence percentage from 1 to 100 in the category classification.",
-    },
-    priorityConfidence: {
-      type: Type.INTEGER,
-      description: "Confidence percentage from 1 to 100 in the priority assignment.",
-    },
-    sentimentConfidence: {
-      type: Type.INTEGER,
-      description: "Confidence percentage from 1 to 100 in the sentiment detection.",
-    },
-    responseConfidence: {
-      type: Type.INTEGER,
-      description: "Confidence percentage from 1 to 100 in the suggested draft response quality.",
+      type: Type.OBJECT,
+      properties: {
+        recommended: {
+          type: Type.BOOLEAN,
+          description: "True if escalation is recommended, false otherwise.",
+        },
+        team: {
+          type: Type.STRING,
+          description: "The team to escalate to (e.g. 'Tier 2 Support', 'Specialist Team', or empty string if not recommended).",
+        },
+        reason: {
+          type: Type.STRING,
+          description: "The rationale for recommending escalation or lack thereof.",
+        }
+      },
+      required: ["recommended", "team", "reason"]
     }
   },
   required: [
@@ -93,45 +107,177 @@ const analysisSchema = {
     "category",
     "priority",
     "sentiment",
-    "categoryReason",
-    "priorityReason",
-    "sentimentReason",
-    "suggestedResponse",
-    "escalation",
-    "escalationReason",
-    "categoryConfidence",
-    "priorityConfidence",
-    "sentimentConfidence",
-    "responseConfidence"
+    "suggested_response",
+    "confidence",
+    "reasoning",
+    "escalation"
   ]
 };
 
+export interface GeminiAnalysisResult {
+  summary: string;
+  category: string;
+  priority: string;
+  sentiment: string;
+  suggested_response: string;
+  confidence: {
+    category: number;
+    priority: number;
+    sentiment: number;
+    response: number;
+  };
+  reasoning: {
+    category: string;
+    priority: string;
+    sentiment: string;
+  };
+  escalation: {
+    recommended: boolean;
+    team: string;
+    reason: string;
+  };
+}
+
 /**
- * Analyzes a customer support ticket.
- * It will attempt to call the Gemini API if a key is present,
- * and will gracefully fall back to local mock parsing if anything fails or key is missing.
+ * Validates the structure and property types of a Gemini analysis response.
  */
-export async function analyzeTicketWithAI(ticketText: string): Promise<AnalysisResponse> {
-  // If no API key is set, immediately run mock analysis
+export function isValidGeminiAnalysisResult(data: any): data is GeminiAnalysisResult {
+  if (!data || typeof data !== 'object') return false;
+  if (typeof data.summary !== 'string') return false;
+  if (typeof data.category !== 'string') return false;
+  if (typeof data.priority !== 'string') return false;
+  if (typeof data.sentiment !== 'string') return false;
+  if (typeof data.suggested_response !== 'string') return false;
+  
+  if (!data.confidence || typeof data.confidence !== 'object') return false;
+  if (typeof data.confidence.category !== 'number') return false;
+  if (typeof data.confidence.priority !== 'number') return false;
+  if (typeof data.confidence.sentiment !== 'number') return false;
+  if (typeof data.confidence.response !== 'number') return false;
+
+  if (!data.reasoning || typeof data.reasoning !== 'object') return false;
+  if (typeof data.reasoning.category !== 'string') return false;
+  if (typeof data.reasoning.priority !== 'string') return false;
+  if (typeof data.reasoning.sentiment !== 'string') return false;
+
+  if (!data.escalation || typeof data.escalation !== 'object') return false;
+  if (typeof data.escalation.recommended !== 'boolean') return false;
+  if (typeof data.escalation.team !== 'string') return false;
+  if (typeof data.escalation.reason !== 'string') return false;
+
+  return true;
+}
+
+/**
+ * Generates a structured fallback response that matches the exact Gemini schema.
+ */
+export function getStructuredFallbackResponse(ticketText: string): GeminiAnalysisResult {
+  const oldMock = getMockAnalysis(ticketText);
+  const isEscalated = oldMock.escalation !== 'No Escalation Required';
+  let teamName = '';
+  if (oldMock.escalation === 'Escalate to Specialist Team') {
+    teamName = 'Specialist Team';
+  } else if (oldMock.escalation === 'Escalate to Tier 2') {
+    teamName = 'Tier 2 Support';
+  }
+
+  return {
+    summary: oldMock.summary,
+    category: oldMock.category,
+    priority: oldMock.priority,
+    sentiment: oldMock.sentiment,
+    suggested_response: oldMock.suggestedResponse,
+    confidence: {
+      category: oldMock.categoryConfidence,
+      priority: oldMock.priorityConfidence,
+      sentiment: oldMock.sentimentConfidence,
+      response: oldMock.responseConfidence
+    },
+    reasoning: {
+      category: oldMock.categoryReason,
+      priority: oldMock.priorityReason,
+      sentiment: oldMock.sentimentReason
+    },
+    escalation: {
+      recommended: isEscalated,
+      team: teamName,
+      reason: oldMock.escalationReason
+    }
+  };
+}
+
+/**
+ * Analyzes a customer support ticket using the Gemini API.
+ * Performs schema validation and falls back to a structured mock response if needed.
+ */
+export async function analyzeTicketWithAI(ticketText: string): Promise<GeminiAnalysisResult> {
   if (!aiClient) {
-    console.log("[ResolveIQ AI] No GEMINI_API_KEY environment variable found. Falling back to Mock Data engine.");
-    return getMockAnalysis(ticketText);
+    console.log("[ResolveIQ AI] No GEMINI_API_KEY environment variable configured. Using fallback parser.");
+    return getStructuredFallbackResponse(ticketText);
   }
 
   try {
     const prompt = `
-      You are an advanced AI Customer Support Copilot assisting a support operations agent.
-      Analyze the following customer support ticket and extract the required fields exactly matching the output schema.
-      
-      Support Ticket Text:
-      """
-      ${ticketText}
-      """
-      
-      Generate a suggested response that directly addresses the issue, is highly professional, and provides concrete next steps or troubleshooting.
-    `;
+You are an enterprise customer support operations analyst.
 
-    console.log("[ResolveIQ AI] Forwarding ticket to Gemini API...");
+Your job is to analyse customer support tickets and return structured JSON.
+
+Rules:
+
+1. Return valid JSON only.
+2. Do not include markdown.
+3. Do not include explanations outside JSON.
+4. Use only the provided schema.
+
+Tasks:
+
+* Summarise the issue
+* Classify the category
+* Determine priority
+* Identify customer sentiment
+* Draft a professional support response
+* Explain classification decisions
+* Recommend escalation when appropriate
+
+Categories:
+
+* Hardware Support
+* Software Support
+* Account Access
+* Payment Issue
+* Delivery Issue
+* General Inquiry
+
+Priorities:
+
+* Low
+* Medium
+* High
+
+Sentiments:
+
+* Neutral
+* Frustrated
+* Angry
+* Satisfied
+
+Escalate when:
+
+* payment disputes exist
+* fraud indicators exist
+* security concerns exist
+* repeated unresolved complaints exist
+* confidence is low
+
+Return JSON only.
+
+Customer Support Ticket to Analyse:
+"""
+${ticketText}
+"""
+`;
+
+    console.log("[ResolveIQ AI] Calling Gemini API...");
 
     const response = await aiClient.models.generateContent({
       model: 'gemini-2.5-flash',
@@ -139,21 +285,26 @@ export async function analyzeTicketWithAI(ticketText: string): Promise<AnalysisR
       config: {
         responseMimeType: 'application/json',
         responseSchema: analysisSchema,
-        temperature: 0.1, // Low temperature for deterministic analysis
+        temperature: 0.15,
       }
     });
 
     const responseText = response.text();
     if (!responseText) {
-      throw new Error("Received empty response from Gemini API.");
+      throw new Error("Gemini returned empty text.");
     }
 
-    const parsedResult: AnalysisResponse = JSON.parse(responseText);
-    console.log("[ResolveIQ AI] Successfully analyzed ticket via Gemini API.");
-    return parsedResult;
+    const parsedResult = JSON.parse(responseText);
+
+    if (isValidGeminiAnalysisResult(parsedResult)) {
+      console.log("[ResolveIQ AI] Gemini response successfully validated.");
+      return parsedResult;
+    } else {
+      console.warn("[ResolveIQ AI] Gemini response failed validation format. Activating fallback schema.");
+      return getStructuredFallbackResponse(ticketText);
+    }
   } catch (error) {
-    console.error("[ResolveIQ AI] Failed to analyze ticket with Gemini API. Error details:", error);
-    console.log("[ResolveIQ AI] Gracefully falling back to local Mock Data engine.");
-    return getMockAnalysis(ticketText);
+    console.error("[ResolveIQ AI] Gemini API processing failed:", error);
+    return getStructuredFallbackResponse(ticketText);
   }
 }
