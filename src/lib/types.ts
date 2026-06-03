@@ -52,3 +52,11 @@ export interface ActionLog {
   aiRecommendation: string;
   sentiment: TicketSentiment;
 }
+
+export interface EscalationRule {
+  id: string;
+  name: string;
+  description: string;
+  weight: number;
+  status: 'Active' | 'Disabled';
+}

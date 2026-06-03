@@ -228,17 +228,12 @@ export default function RightPanel({
       </div>
 
       {/* Escalation Recommendation Card */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:border-slate-350 transition-all duration-200 flex flex-col gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1 select-none">
-            <AlertCircle size={16} className="text-slate-500" />
-            <h3 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
-              Escalation Recommendation
-            </h3>
-          </div>
-          <p className="text-[10px] text-slate-400 font-medium">
-            Determined by rules engine evaluating incoming ticket criteria.
-          </p>
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:border-slate-350 transition-all duration-200 flex flex-col gap-3">
+        <div className="flex items-center gap-2 mb-1 select-none">
+          <AlertCircle size={16} className="text-slate-500" />
+          <h3 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+            Escalation Recommendation
+          </h3>
         </div>
         
         {/* Recommendation badge & reason box */}
@@ -248,58 +243,101 @@ export default function RightPanel({
           </div>
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-bold text-slate-800">
-              {engineResult.calculatedEscalation}
+              {analysisResult.escalation}
             </span>
             <p className="text-[11px] leading-relaxed text-slate-500 font-semibold select-text">
-              {engineResult.justification}
+              {analysisResult.escalationReason}
             </p>
           </div>
         </div>
+      </div>
 
-        {/* Divider */}
-        <div className="border-t border-slate-100 my-1" />
-
-        {/* Triggers Breakdown */}
+      {/* Escalation Decision Panel */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:border-slate-350 transition-all duration-200 flex flex-col gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-3 select-none">
-            <ShieldCheck size={14} className="text-indigo-500" />
-            <h4 className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
-              Rules Engine Triggers
-            </h4>
-          </div>
+          <h3 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider select-none mb-1">
+            Escalation Decision Panel
+          </h3>
+          <p className="text-[10px] text-slate-400 font-medium select-none">
+            Audit trail of automated routing triggers and logic.
+          </p>
+        </div>
 
-          <div className="flex flex-col gap-3 max-h-[220px] overflow-y-auto pr-1">
-            {engineResult.triggers.map((trigger, idx) => (
-              <div key={idx} className="flex flex-col gap-1 text-[11px] leading-normal">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-700">
-                    {trigger.triggered ? (
-                      <Check size={13} className="text-emerald-500 stroke-[3]" />
-                    ) : (
-                      <X size={13} className="text-slate-350 stroke-[3]" />
-                    )}
-                    <span className={trigger.triggered ? 'text-slate-850' : 'text-slate-500'}>
-                      {trigger.name}
-                    </span>
-                  </div>
-                  <span className={`text-[8px] font-black px-1.5 py-0.2 rounded-md uppercase tracking-wider border select-none ${
-                    trigger.triggered
-                      ? 'bg-rose-50 border-rose-100 text-rose-600'
-                      : 'bg-slate-50 border-slate-150 text-slate-400'
-                  }`}>
-                    {trigger.triggered ? 'Triggered' : 'Not Triggered'}
+        {/* Triggers Checklist */}
+        <div>
+          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-2 select-none">
+            Escalation Triggers Checked
+          </span>
+          <div className="flex flex-col gap-2 bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+            {engineResult.triggers.map((trigger, idx) => {
+              // Map display name to fit prompt request
+              const displayName = trigger.name === 'Payment Dispute' ? 'Payment Issue' : trigger.name;
+              return (
+                <div key={idx} className="flex items-center gap-2 text-[11px] font-semibold text-slate-700">
+                  {trigger.triggered ? (
+                    <span className="text-emerald-500 font-extrabold stroke-[3]">✓</span>
+                  ) : (
+                    <span className="text-slate-300 font-extrabold">✗</span>
+                  )}
+                  <span className={trigger.triggered ? 'text-slate-850 font-bold' : 'text-slate-400 font-medium'}>
+                    {displayName}
                   </span>
                 </div>
-                <p className={`pl-4.5 text-[10px] font-semibold leading-snug ${
-                  trigger.triggered ? 'text-slate-500' : 'text-slate-400'
-                }`}>
-                  {trigger.explanation}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
+        {/* Decision Summary */}
+        <div className="flex flex-col gap-3.5 border-t border-slate-100 pt-3.5 text-xs">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider select-none">Decision</span>
+            <span className="font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-100/50 px-2.5 py-1 rounded-lg self-start">
+              {engineResult.calculatedEscalation}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider select-none">Reason</span>
+            <p className="text-[11px] leading-relaxed text-slate-600 font-medium select-text">
+              {(() => {
+                const active = engineResult.triggers.filter(t => t.triggered).map(t => t.name.toLowerCase());
+                if (active.length === 0) {
+                  return "No escalation triggers were matched. Front-line automated resolution checklist applies.";
+                }
+                if (active.includes('angry customer') && active.includes('payment dispute')) {
+                  return "Multiple escalation triggers were detected, including customer frustration and payment dispute indicators.";
+                }
+                if (active.includes('security risk') || active.includes('fraud concern')) {
+                  return "Critical security blocks or fraud indicators were detected, requiring immediate routing to the specialist team.";
+                }
+                const first = engineResult.triggers.find(t => t.triggered);
+                return `An escalation trigger (${first?.name}) was matched, requiring routing to Tier 2 support for further diagnostics.`;
+              })()}
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider select-none">Confidence</span>
+            <div className="flex items-center gap-2">
+              <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden select-none">
+                <div
+                  className="h-full rounded-full bg-indigo-500 transition-all duration-500"
+                  style={{
+                    width: `${Math.round(
+                      (analysisResult.categoryConfidence * 0.6 + analysisResult.sentimentConfidence * 0.4)
+                    )}%`,
+                  }}
+                />
+              </div>
+              <span className="font-extrabold text-slate-700">
+                {Math.round(
+                  (analysisResult.categoryConfidence * 0.6 + analysisResult.sentimentConfidence * 0.4)
+                )}%
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Agent Actions */}
