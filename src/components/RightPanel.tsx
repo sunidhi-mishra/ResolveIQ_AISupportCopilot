@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnalysisResponse, EscalationType } from '@/lib/types';
-import { Shield, Sparkles, AlertCircle, ArrowUpRight, CheckCircle2, UserCheck, ShieldAlert } from 'lucide-react';
+import { Shield, Sparkles, AlertCircle, ArrowUpRight, CheckCircle2, UserCheck, ShieldAlert, XCircle } from 'lucide-react';
 
 interface RightPanelProps {
   isLoading: boolean;
@@ -8,6 +8,7 @@ interface RightPanelProps {
   onAccept: () => void;
   onEscalateTrigger: () => void;
   onEditToggle: () => void;
+  onReject: () => void;
   isEditingResponse: boolean;
   lastAgentAction: string | null;
 }
@@ -18,6 +19,7 @@ export default function RightPanel({
   onAccept,
   onEscalateTrigger,
   onEditToggle,
+  onReject,
   isEditingResponse,
   lastAgentAction,
 }: RightPanelProps) {
@@ -289,6 +291,16 @@ export default function RightPanel({
           >
             <ArrowUpRight size={14} />
             Escalate Ticket
+          </button>
+
+          {/* Action 4: Reject Recommendation */}
+          <button
+            onClick={onReject}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-250 transition-all cursor-pointer"
+            type="button"
+          >
+            <XCircle size={14} />
+            Reject Recommendation
           </button>
         </div>
 

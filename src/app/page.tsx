@@ -5,7 +5,9 @@ import Header from '@/components/Header';
 import LeftPanel from '@/components/LeftPanel';
 import MiddlePanel from '@/components/MiddlePanel';
 import RightPanel from '@/components/RightPanel';
+import ResolutionHistory from '@/components/ResolutionHistory';
 import { AnalysisResponse, ActionLog, TicketCategory, TicketPriority, EscalationType } from '@/lib/types';
+import { INITIAL_ACTION_LOGS } from '@/lib/mockData';
 import { X, AlertCircle, CheckCircle, Info } from 'lucide-react';
 
 interface Toast {
@@ -28,6 +30,10 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
 
+  // Analysis ID State Tracking
+  const [nextAnalysisId, setNextAnalysisId] = useState(125);
+  const [activeAnalysisId, setActiveAnalysisId] = useState<string | null>(null);
+
   // Suggested Response Editing / Tone States
   const [activeTone, setActiveTone] = useState<'empathy' | 'professional' | 'concise'>('empathy');
   const [responseVariations, setResponseVariations] = useState<{
@@ -38,9 +44,12 @@ export default function Home() {
   const [suggestedResponseText, setSuggestedResponseText] = useState('');
   const [isEditingResponse, setIsEditingResponse] = useState(false);
 
+  // Active Tab state (AI Copilot vs Resolution History Dashboard)
+  const [activeTab, setActiveTab] = useState<'copilot' | 'history'>('copilot');
+
   // Operational Audits / History
   const [lastAgentAction, setLastAgentAction] = useState<string | null>(null);
-  const [actionLogs, setActionLogs] = useState<ActionLog[]>([]);
+  const [actionLogs, setActionLogs] = useState<ActionLog[]>(INITIAL_ACTION_LOGS);
 
   // Toast Queue
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -64,6 +73,17 @@ export default function Home() {
 
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // Helper to get formatted timestamp YYYY-MM-DD HH:mm
+  const getFormattedTimestamp = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
   };
 
   // 2. Fetch Analysis Action
@@ -98,12 +118,17 @@ export default function Home() {
       const variations = generateToneVariations(data.suggestedResponse, data.category);
       setResponseVariations(variations);
       
+      // Generate unique analysis ID sequentially
+      const currentId = `#${nextAnalysisId}`;
+      setActiveAnalysisId(currentId);
+      setNextAnalysisId(prev => prev + 1);
+
       // Bind data
       setAnalysisResult(data);
       setSuggestedResponseText(variations.empathy);
       setActiveTone('empathy');
       
-      addToast('Analysis Loaded', 'AI recommendations and response draft generated.', 'success');
+      addToast('Analysis Loaded', `AI recommendations loaded under ID: ${currentId}.`, 'success');
     } catch (error) {
       console.error('Error analyzing ticket:', error);
       addToast('API Error', 'Failed to communicate with analysis server.', 'warning');
@@ -118,7 +143,6 @@ export default function Home() {
     let conciseText = base;
     const lines = base.split('\n').filter(l => l.trim().length > 0);
     if (lines.length > 1) {
-      // Find a line that isn't the greeting or closing
       const coreLines = lines.filter(l => !l.startsWith('Dear') && !l.startsWith('Hi') && !l.startsWith('Hello') && !l.startsWith('Thank') && !l.startsWith('Sincerely') && !l.startsWith('Best') && !l.includes('patience'));
       if (coreLines.length > 0) {
         conciseText = `Regarding the issue: ${coreLines[0]}\n\nWe have initiated investigation. Updates will follow shortly.`;
@@ -172,6 +196,7 @@ export default function Home() {
     setResponseVariations(null);
     setSuggestedResponseText('');
     setIsEditingResponse(false);
+    setActiveAnalysisId(null);
     addToast('Dashboard Cleared', 'Resetting active workspace values.', 'info');
   };
 
@@ -191,19 +216,26 @@ export default function Home() {
 
   // 5. Actions: Accept
   const handleAcceptRecommendation = () => {
-    if (!analysisResult) return;
+    if (!analysisResult || !activeAnalysisId) return;
 
     navigator.clipboard.writeText(suggestedResponseText)
       .then(() => {
-        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const timestamp = getFormattedTimestamp();
         
         // Log action
         const logItem: ActionLog = {
           id: Math.random().toString(36).substring(2, 9),
+          analysisId: activeAnalysisId,
+          ticketSummary: analysisResult.summary,
+          category: analysisResult.category,
+          priority: analysisResult.priority,
+          escalation: analysisResult.escalation,
+          agentAction: 'Accept Recommendation',
           timestamp,
-          action: 'Accept Recommendation',
-          ticketText: analysisResult.summary,
-          details: 'Copied draft and closed ticket.'
+          outcomeStatus: 'Accepted',
+          customerIssue: ticketText,
+          aiRecommendation: suggestedResponseText,
+          sentiment: analysisResult.sentiment
         };
         setActionLogs((prev) => [logItem, ...prev]);
         setLastAgentAction('Accepted Recommendation');
@@ -215,13 +247,16 @@ export default function Home() {
         setResponseVariations(null);
         setSuggestedResponseText('');
         setIsEditingResponse(false);
+        setActiveAnalysisId(null);
 
-        addToast('Recommendation Accepted', 'Response copied and logged. Dashboard reset.', 'success');
+        addToast('Recommendation Accepted', 'Response copied and audit logged. Dashboard reset.', 'success');
       });
   };
 
   // 6. Actions: Edit Toggle
   const handleEditToggle = () => {
+    if (!analysisResult || !activeAnalysisId) return;
+
     if (isEditingResponse) {
       // Save changes
       if (responseVariations) {
@@ -232,17 +267,24 @@ export default function Home() {
       setIsEditingResponse(false);
       setLastAgentAction('Edit Response');
       
-      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const timestamp = getFormattedTimestamp();
       const logItem: ActionLog = {
         id: Math.random().toString(36).substring(2, 9),
+        analysisId: activeAnalysisId,
+        ticketSummary: analysisResult.summary,
+        category: analysisResult.category,
+        priority: analysisResult.priority,
+        escalation: analysisResult.escalation,
+        agentAction: 'Edit Response',
         timestamp,
-        action: 'Edit Response',
-        ticketText: analysisResult?.summary || 'Ticket Response',
-        details: 'Customized suggested response draft.'
+        outcomeStatus: 'Edited',
+        customerIssue: ticketText,
+        aiRecommendation: suggestedResponseText,
+        sentiment: analysisResult.sentiment
       };
       setActionLogs((prev) => [logItem, ...prev]);
 
-      addToast('Changes Saved', 'Custom draft changes stored successfully.', 'success');
+      addToast('Changes Saved', 'Custom draft changes stored and audit logged.', 'success');
     } else {
       setIsEditingResponse(true);
       addToast('Editing Enabled', 'You can now customize the response draft.', 'info');
@@ -273,9 +315,9 @@ export default function Home() {
   };
 
   const handleEscalateSubmit = () => {
-    if (!analysisResult) return;
+    if (!analysisResult || !activeAnalysisId) return;
 
-    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timestamp = getFormattedTimestamp();
     const targetDept = 
       escalateDept === 'engineering' ? 'Engineering Team' :
       escalateDept === 'billing' ? 'Billing Operations' : 'Tier-2 Support';
@@ -283,10 +325,17 @@ export default function Home() {
     // Log action
     const logItem: ActionLog = {
       id: Math.random().toString(36).substring(2, 9),
+      analysisId: activeAnalysisId,
+      ticketSummary: analysisResult.summary,
+      category: analysisResult.category,
+      priority: analysisResult.priority,
+      escalation: analysisResult.escalation,
+      agentAction: 'Escalate Ticket',
       timestamp,
-      action: 'Escalate Ticket',
-      ticketText: analysisResult.summary,
-      details: `Escalated to ${targetDept} (Urgency: ${escalatePriority})`
+      outcomeStatus: 'Escalated',
+      customerIssue: ticketText,
+      aiRecommendation: suggestedResponseText,
+      sentiment: analysisResult.sentiment
     };
 
     setActionLogs((prev) => [logItem, ...prev]);
@@ -300,7 +349,43 @@ export default function Home() {
     } : null);
 
     setIsEscalateModalOpen(false);
-    addToast('Ticket Escalated', `Ticket successfully routed to ${targetDept}.`, 'warning');
+    addToast('Ticket Escalated', `Ticket successfully routed to ${targetDept} and logged.`, 'warning');
+  };
+
+  // 8. Actions: Reject Recommendation
+  const handleRejectRecommendation = () => {
+    if (!analysisResult || !activeAnalysisId) return;
+
+    const timestamp = getFormattedTimestamp();
+    
+    // Log action
+    const logItem: ActionLog = {
+      id: Math.random().toString(36).substring(2, 9),
+      analysisId: activeAnalysisId,
+      ticketSummary: analysisResult.summary,
+      category: analysisResult.category,
+      priority: analysisResult.priority,
+      escalation: analysisResult.escalation,
+      agentAction: 'Reject Recommendation',
+      timestamp,
+      outcomeStatus: 'Rejected',
+      customerIssue: ticketText,
+      aiRecommendation: suggestedResponseText,
+      sentiment: analysisResult.sentiment
+    };
+    setActionLogs((prev) => [logItem, ...prev]);
+    setLastAgentAction('Rejected Recommendation');
+
+    // Clear dashboard state
+    setTicketText('');
+    setSelectedPresetId(null);
+    setAnalysisResult(null);
+    setResponseVariations(null);
+    setSuggestedResponseText('');
+    setIsEditingResponse(false);
+    setActiveAnalysisId(null);
+
+    addToast('Recommendation Rejected', 'Copilot recommendation rejected and ticket reset.', 'warning');
   };
 
   if (!isMounted) {
@@ -313,48 +398,66 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
-      <Header />
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        historyCount={actionLogs.length}
+      />
 
-      {/* 3-Column Layout */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[380px_1fr_340px] overflow-y-auto lg:overflow-hidden bg-slate-50">
-        
-        {/* Left Column: Ticket Intake */}
-        <LeftPanel
-          ticketText={ticketText}
-          setTicketText={setTicketText}
-          onSubmit={handleAnalyzeTicket}
-          onClear={handleClearDashboard}
-          isLoading={isLoading}
+      {/* Main Content Area */}
+      {activeTab === 'copilot' ? (
+        /* 3-Column Layout */
+        <main className="flex-1 grid grid-cols-1 lg:grid-cols-[380px_1fr_340px] overflow-y-auto lg:overflow-hidden bg-slate-50">
+          
+          {/* Left Column: Ticket Intake */}
+          <LeftPanel
+            ticketText={ticketText}
+            setTicketText={setTicketText}
+            onSubmit={handleAnalyzeTicket}
+            onClear={handleClearDashboard}
+            isLoading={isLoading}
+            actionLogs={actionLogs}
+            selectedPresetId={selectedPresetId}
+            setSelectedPresetId={setSelectedPresetId}
+            onViewFullHistory={() => setActiveTab('history')}
+          />
+
+          {/* Middle Column: Summary & Suggested Response */}
+          <MiddlePanel
+            isLoading={isLoading}
+            analysisResult={analysisResult}
+            activeTone={activeTone}
+            setActiveTone={handleToneChange}
+            suggestedResponseText={suggestedResponseText}
+            setSuggestedResponseText={setSuggestedResponseText}
+            isEditingResponse={isEditingResponse}
+            onCopyResponse={handleCopyResponse}
+            isCopied={toasts.some(t => t.title === 'Copied')}
+          />
+
+          {/* Right Column: Confidence & Resolution Actions */}
+          <RightPanel
+            isLoading={isLoading}
+            analysisResult={analysisResult}
+            onAccept={handleAcceptRecommendation}
+            onEscalateTrigger={handleEscalateTrigger}
+            onEditToggle={handleEditToggle}
+            onReject={handleRejectRecommendation}
+            isEditingResponse={isEditingResponse}
+            lastAgentAction={lastAgentAction}
+          />
+
+        </main>
+      ) : (
+        /* Resolution History Operations Dashboard */
+        <ResolutionHistory
           actionLogs={actionLogs}
-          selectedPresetId={selectedPresetId}
-          setSelectedPresetId={setSelectedPresetId}
+          onClearLogs={() => {
+            setActionLogs([]);
+            addToast('History Cleared', 'All audit logs have been successfully cleared.', 'info');
+          }}
         />
-
-        {/* Middle Column: Summary & Suggested Response */}
-        <MiddlePanel
-          isLoading={isLoading}
-          analysisResult={analysisResult}
-          activeTone={activeTone}
-          setActiveTone={handleToneChange}
-          suggestedResponseText={suggestedResponseText}
-          setSuggestedResponseText={setSuggestedResponseText}
-          isEditingResponse={isEditingResponse}
-          onCopyResponse={handleCopyResponse}
-          isCopied={toasts.some(t => t.title === 'Copied')}
-        />
-
-        {/* Right Column: Confidence & Resolution Actions */}
-        <RightPanel
-          isLoading={isLoading}
-          analysisResult={analysisResult}
-          onAccept={handleAcceptRecommendation}
-          onEscalateTrigger={handleEscalateTrigger}
-          onEditToggle={handleEditToggle}
-          isEditingResponse={isEditingResponse}
-          lastAgentAction={lastAgentAction}
-        />
-
-      </main>
+      )}
 
       {/* Escalation Modal Portal */}
       {isEscalateModalOpen && (

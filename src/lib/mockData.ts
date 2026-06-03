@@ -1,4 +1,4 @@
-import { AnalysisResponse, TicketCategory, TicketPriority, TicketSentiment, EscalationType } from './types';
+import { AnalysisResponse, TicketCategory, TicketPriority, TicketSentiment, EscalationType, ActionLog } from './types';
 
 // Default mock response requested in specs
 export const DEFAULT_MOCK_RESPONSE: AnalysisResponse = {
@@ -305,3 +305,63 @@ export function getMockAnalysis(text: string): AnalysisResponse {
     responseConfidence
   };
 }
+
+export const INITIAL_ACTION_LOGS: ActionLog[] = [
+  {
+    id: "hist-1",
+    analysisId: "#124",
+    ticketSummary: "Account lockout due to password failure",
+    category: "Account Access",
+    priority: "High",
+    escalation: "Escalate to Tier 2",
+    agentAction: "Accept Recommendation",
+    timestamp: "2026-06-03 18:24",
+    outcomeStatus: "Accepted",
+    customerIssue: "I cannot log in to the dashboard. It says my account is locked due to security failed attempts. Please unlock it immediately.",
+    aiRecommendation: "Hi, I have reviewed your account and verified it was locked for security after consecutive failed logins. I have sent a secure unlock link to your registered email address. Please click it within 15 minutes to recover access.",
+    sentiment: "Frustrated"
+  },
+  {
+    id: "hist-2",
+    analysisId: "#123",
+    ticketSummary: "Subscription double charge dispute",
+    category: "Payment Issue",
+    priority: "High",
+    escalation: "Escalate to Specialist Team",
+    agentAction: "Escalate Ticket",
+    timestamp: "2026-06-03 16:45",
+    outcomeStatus: "Escalated",
+    customerIssue: "Urgent! I have been charged twice for my subscription this month. I need a refund for the second transaction of $149.00.",
+    aiRecommendation: "Hello, I apologize for this billing discrepancy. I've reviewed your account history and verified the charge in question. I have processed a full refund of the amount back to your payment card. Please allow 3 to 5 business days for this credit to appear.",
+    sentiment: "Angry"
+  },
+  {
+    id: "hist-3",
+    analysisId: "#122",
+    ticketSummary: "External monitor HDMI flickering",
+    category: "Hardware Support",
+    priority: "Medium",
+    escalation: "No Escalation Required",
+    agentAction: "Edit Response",
+    timestamp: "2026-06-03 14:15",
+    outcomeStatus: "Edited",
+    customerIssue: "My external monitor screen is flickering when connected to my laptop via HDMI. I tried replacing the cable but it didn't help.",
+    aiRecommendation: "Thank you for reaching out. Let's start by isolating the hardware component. Please restart your device, reconnect all cables, and run the built-in Hardware Diagnostics Utility. Let us know the diagnostic error code.",
+    sentiment: "Frustrated"
+  },
+  {
+    id: "hist-4",
+    analysisId: "#121",
+    ticketSummary: "Enterprise pricing volume inquiries",
+    category: "General Inquiry",
+    priority: "Low",
+    escalation: "No Escalation Required",
+    agentAction: "Reject Recommendation",
+    timestamp: "2026-06-03 11:05",
+    outcomeStatus: "Rejected",
+    customerIssue: "Do you offer volume discounts for enterprise teams of more than 50 users?",
+    aiRecommendation: "Thank you for contacting customer support. We have received your query and are reviewing it. A customer support representative will get back to you with detailed assistance shortly.",
+    sentiment: "Neutral"
+  }
+];
+

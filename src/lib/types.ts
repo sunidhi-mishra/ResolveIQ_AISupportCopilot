@@ -36,8 +36,19 @@ export interface AnalysisResponse {
 
 export interface ActionLog {
   id: string;
+  analysisId: string;
+  ticketSummary: string;
+  category: TicketCategory;
+  priority: TicketPriority;
+  escalation: EscalationType;
+  agentAction:
+    | 'Accept Recommendation'
+    | 'Edit Response'
+    | 'Escalate Ticket'
+    | 'Reject Recommendation';
   timestamp: string;
-  action: 'Accept Recommendation' | 'Escalate Ticket' | 'Edit Response';
-  ticketText: string;
-  details?: string;
+  outcomeStatus: 'Accepted' | 'Edited' | 'Escalated' | 'Rejected';
+  customerIssue: string;
+  aiRecommendation: string;
+  sentiment: TicketSentiment;
 }
