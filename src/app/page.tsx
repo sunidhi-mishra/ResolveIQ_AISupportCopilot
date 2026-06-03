@@ -6,6 +6,7 @@ import LeftPanel from '@/components/LeftPanel';
 import MiddlePanel from '@/components/MiddlePanel';
 import RightPanel from '@/components/RightPanel';
 import ResolutionHistory from '@/components/ResolutionHistory';
+import ResolutionDetailsDrawer from '@/components/ResolutionDetailsDrawer';
 import { AnalysisResponse, ActionLog, TicketCategory, TicketPriority, EscalationType } from '@/lib/types';
 import { INITIAL_ACTION_LOGS } from '@/lib/mockData';
 import { X, AlertCircle, CheckCircle, Info } from 'lucide-react';
@@ -46,6 +47,9 @@ export default function Home() {
 
   // Active Tab state (AI Copilot vs Resolution History Dashboard)
   const [activeTab, setActiveTab] = useState<'copilot' | 'history'>('copilot');
+
+  // Selected audit log for detail drawer
+  const [selectedHistoryLog, setSelectedHistoryLog] = useState<ActionLog | null>(null);
 
   // Operational Audits / History
   const [lastAgentAction, setLastAgentAction] = useState<string | null>(null);
@@ -420,6 +424,7 @@ export default function Home() {
             selectedPresetId={selectedPresetId}
             setSelectedPresetId={setSelectedPresetId}
             onViewFullHistory={() => setActiveTab('history')}
+            onLogClick={(log) => setSelectedHistoryLog(log)}
           />
 
           {/* Middle Column: Summary & Suggested Response */}
@@ -456,8 +461,15 @@ export default function Home() {
             setActionLogs([]);
             addToast('History Cleared', 'All audit logs have been successfully cleared.', 'info');
           }}
+          onLogClick={(log) => setSelectedHistoryLog(log)}
         />
       )}
+
+      {/* Resolution Details Side-Drawer Portal */}
+      <ResolutionDetailsDrawer
+        log={selectedHistoryLog}
+        onClose={() => setSelectedHistoryLog(null)}
+      />
 
       {/* Escalation Modal Portal */}
       {isEscalateModalOpen && (

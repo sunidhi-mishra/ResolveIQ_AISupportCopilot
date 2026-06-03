@@ -13,6 +13,7 @@ interface LeftPanelProps {
   selectedPresetId: string | null;
   setSelectedPresetId: (id: string | null) => void;
   onViewFullHistory?: () => void;
+  onLogClick?: (log: ActionLog) => void;
 }
 
 export default function LeftPanel({
@@ -25,6 +26,7 @@ export default function LeftPanel({
   selectedPresetId,
   setSelectedPresetId,
   onViewFullHistory,
+  onLogClick,
 }: LeftPanelProps) {
   
   const [filter, setFilter] = useState<'All' | 'Accepted' | 'Escalated' | 'Edited' | 'Rejected'>('All');
@@ -193,23 +195,18 @@ export default function LeftPanel({
             </div>
           ) : (
             filteredLogs.map((log) => {
-              const isExpanded = expandedLogId === log.id;
               return (
                 <div
                   key={log.id}
-                  onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
-                  className={`flex flex-col gap-1.5 p-3 rounded-xl border transition-all duration-150 text-[11px] cursor-pointer ${
-                    isExpanded
-                      ? 'bg-white border-slate-350 shadow-2xs'
-                      : 'bg-slate-55/40 border-slate-200 hover:bg-white hover:border-slate-350'
-                  }`}
+                  onClick={() => onLogClick?.(log)}
+                  className="flex flex-col gap-1.5 p-3 rounded-xl border border-slate-200 bg-slate-55/40 hover:bg-white hover:border-indigo-300 hover:shadow-2xs transition-all duration-150 text-[11px] cursor-pointer group"
                 >
                   <div className="flex justify-between items-center select-none">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-extrabold text-slate-700 text-[10px]">
+                      <span className="font-extrabold text-slate-700 text-[10px] group-hover:text-indigo-600 transition-colors">
                         {log.analysisId}
                       </span>
-                      {isExpanded ? <ChevronUp size={11} className="text-slate-400" /> : <ChevronDown size={11} className="text-slate-400" />}
+                      <ExternalLink size={10} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-all duration-150" />
                     </div>
                     <span
                       className={`px-2 py-0.5 font-bold rounded-full text-[9px] border ${
@@ -230,7 +227,7 @@ export default function LeftPanel({
                     {log.ticketSummary}
                   </p>
 
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-slate-455 text-slate-400 border-t border-slate-100 pt-1.5 font-medium select-none">
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-slate-400 border-t border-slate-100 pt-1.5 font-medium select-none">
                     <div className="truncate">
                       Cat: <span className="font-bold text-slate-700">{log.category}</span>
                     </div>
@@ -244,27 +241,6 @@ export default function LeftPanel({
                       Action: <span className="font-bold text-slate-700">{log.agentAction}</span>
                     </div>
                   </div>
-
-                  {/* Expanded Detail Panel inside Left Panel */}
-                  {isExpanded && (
-                    <div 
-                      className="flex flex-col gap-2 mt-2 border-t border-slate-100 pt-2 text-[10px] animate-fade-in"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-extrabold text-slate-400 uppercase text-[9px]">Customer Issue:</span>
-                        <p className="bg-slate-50 p-2 rounded-lg text-slate-700 leading-normal max-h-[80px] overflow-y-auto whitespace-pre-wrap font-medium">
-                          {log.customerIssue || "No text recorded."}
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-extrabold text-indigo-400 uppercase text-[9px]">AI Suggestion:</span>
-                        <p className="bg-indigo-50/20 p-2 rounded-lg text-slate-700 leading-normal max-h-[80px] overflow-y-auto whitespace-pre-wrap font-medium border border-indigo-100/30">
-                          {log.aiRecommendation || "No recommendation text."}
-                        </p>
-                      </div>
-                    </div>
-                  )}
 
                   <div className="text-[8px] font-semibold text-slate-400 text-right mt-1 select-none">
                     {log.timestamp}

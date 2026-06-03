@@ -18,12 +18,12 @@ import {
 interface ResolutionHistoryProps {
   actionLogs: ActionLog[];
   onClearLogs?: () => void;
+  onLogClick: (log: ActionLog) => void;
 }
 
-export default function ResolutionHistory({ actionLogs, onClearLogs }: ResolutionHistoryProps) {
+export default function ResolutionHistory({ actionLogs, onClearLogs, onLogClick }: ResolutionHistoryProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<'All' | 'Accepted' | 'Escalated' | 'Edited' | 'Rejected'>('All');
-  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 
   // 1. Calculate KPI Metrics
   const totalCount = actionLogs.length;
@@ -35,26 +35,6 @@ export default function ResolutionHistory({ actionLogs, onClearLogs }: Resolutio
   const getPercentage = (count: number) => {
     if (totalCount === 0) return '0%';
     return `${Math.round((count / totalCount) * 100)}%`;
-  };
-
-  // Toggle detail expansion
-  const toggleExpand = (id: string) => {
-    setExpandedIds(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
-
-  const expandAll = () => {
-    const newExpanded: Record<string, boolean> = {};
-    filteredLogs.forEach(log => {
-      newExpanded[log.id] = true;
-    });
-    setExpandedIds(newExpanded);
-  };
-
-  const collapseAll = () => {
-    setExpandedIds({});
   };
 
   // 2. Filter action logs
@@ -294,27 +274,6 @@ export default function ResolutionHistory({ actionLogs, onClearLogs }: Resolutio
               Rejected ({rejectedCount})
             </button>
           </div>
-
-          <div className="h-5 w-[1px] bg-slate-200 hidden md:block" />
-
-          {/* Expand/Collapse All */}
-          <div className="flex gap-2">
-            <button
-              onClick={expandAll}
-              disabled={filteredLogs.length === 0}
-              className="px-2.5 py-1.5 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              Expand All
-            </button>
-            <button
-              onClick={collapseAll}
-              disabled={filteredLogs.length === 0}
-              className="px-2.5 py-1.5 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              Collapse All
-            </button>
-          </div>
-
         </div>
       </div>
 
@@ -344,133 +303,70 @@ export default function ResolutionHistory({ actionLogs, onClearLogs }: Resolutio
         ) : (
           <div className="flex flex-col gap-3">
             {filteredLogs.map((log) => {
-              const isExpanded = expandedIds[log.id] || false;
               const statusStyle = getStatusStyle(log.outcomeStatus);
 
               return (
                 <div
                   key={log.id}
-                  className={`bg-white rounded-2xl border transition-all duration-200 shadow-2xs hover:shadow-xs overflow-hidden ${
-                    isExpanded ? 'border-slate-300 ring-2 ring-slate-100' : 'border-slate-200/80 hover:border-slate-300'
-                  }`}
+                  onClick={() => onLogClick(log)}
+                  className="bg-white rounded-2xl border border-slate-200/80 hover:border-indigo-300 hover:shadow-xs transition-all duration-200 overflow-hidden cursor-pointer group flex flex-col lg:flex-row lg:items-center justify-between p-5 gap-4 select-none"
                 >
-                  {/* Card Header Section */}
-                  <div
-                    onClick={() => toggleExpand(log.id)}
-                    className="flex flex-col lg:flex-row lg:items-center justify-between p-5 gap-4 cursor-pointer select-none"
-                  >
-                    
-                    {/* Identification & Summary */}
-                    <div className="flex-grow flex items-start gap-3">
-                      <div className="mt-0.5 flex-shrink-0">
-                        {statusStyle.icon}
+                  
+                  {/* Identification & Summary */}
+                  <div className="flex-grow flex items-start gap-3">
+                    <div className="mt-0.5 flex-shrink-0">
+                      {statusStyle.icon}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center flex-wrap gap-2">
+                        <span className="text-[11px] font-extrabold text-slate-750 bg-slate-105 bg-slate-100 px-2 py-0.5 rounded-md group-hover:text-indigo-600 transition-colors">
+                          {log.analysisId}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 leading-tight">
+                          {log.ticketSummary}
+                        </span>
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center flex-wrap gap-2">
-                          <span className="text-[11px] font-extrabold text-slate-750 bg-slate-100 px-2 py-0.5 rounded-md">
-                            {log.analysisId}
-                          </span>
-                          <span className="text-xs font-bold text-slate-800 leading-tight">
-                            {log.ticketSummary}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2.5 text-[10px] text-slate-450 mt-0.5">
-                          <span className="flex items-center gap-1 font-semibold">
-                            <Clock size={11} />
-                            {log.timestamp}
-                          </span>
-                          <span>•</span>
-                          <span className="font-semibold text-slate-500">
-                            Action: <strong className="text-slate-700">{log.agentAction}</strong>
-                          </span>
-                        </div>
+                      <div className="flex items-center gap-2.5 text-[10px] text-slate-450 mt-0.5">
+                        <span className="flex items-center gap-1 font-semibold">
+                          <Clock size={11} />
+                          {log.timestamp}
+                        </span>
+                        <span>•</span>
+                        <span className="font-semibold text-slate-500">
+                          Action: <strong className="text-slate-700">{log.agentAction}</strong>
+                        </span>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Metadata Badges & Toggle Button */}
-                    <div className="flex items-center justify-between lg:justify-end gap-3 flex-shrink-0">
-                      
-                      <div className="flex items-center gap-2">
-                        {/* Category Badge */}
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
-                          {log.category}
-                        </span>
+                  {/* Metadata Badges & Detail Trigger */}
+                  <div className="flex items-center justify-between lg:justify-end gap-3 flex-shrink-0">
+                    
+                    <div className="flex items-center gap-2">
+                      {/* Category Badge */}
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
+                        {log.category}
+                      </span>
 
-                        {/* Priority Badge */}
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${getPriorityBadge(log.priority)}`}>
-                          {log.priority}
-                        </span>
+                      {/* Priority Badge */}
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${getPriorityBadge(log.priority)}`}>
+                        {log.priority}
+                      </span>
 
-                        {/* Outcome Badge */}
-                        <span className={`flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border shadow-2xs ${statusStyle.bg}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
-                          {log.outcomeStatus}
-                        </span>
-                      </div>
+                      {/* Outcome Badge */}
+                      <span className={`flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border shadow-2xs ${statusStyle.bg}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
+                        {log.outcomeStatus}
+                      </span>
+                    </div>
 
-                      {/* Expand Chevron */}
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors">
-                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                      </div>
-
+                    {/* View Details Action Indicator */}
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 group-hover:bg-slate-50 group-hover:text-indigo-600 transition-all duration-200">
+                      <ArrowUpRight size={15} />
                     </div>
 
                   </div>
 
-                  {/* Expanded Detail Panel */}
-                  {isExpanded && (
-                    <div className="border-t border-slate-100 bg-slate-50/40 p-5 flex flex-col gap-4 animate-fade-in">
-                      
-                      {/* Recommendations Route Context */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                          Escalation Recommendation:
-                          <span className="text-[11px] font-extrabold text-slate-700 normal-case ml-1 bg-white px-2 py-0.5 rounded-md border border-slate-200/60">
-                            {log.escalation}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Side-by-Side Customer Issue vs Suggested Reply */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-1">
-                        
-                        {/* Customer Issue Card */}
-                        <div className="flex flex-col gap-1.5 bg-white p-4.5 rounded-xl border border-slate-200/60 shadow-2xs">
-                          <span className="text-[10px] font-extrabold text-slate-450 uppercase tracking-wider flex items-center gap-1.5">
-                            Customer Issue Detail
-                          </span>
-                          <div className="text-xs text-slate-700 leading-relaxed max-h-[160px] overflow-y-auto whitespace-pre-wrap pr-1 font-medium bg-slate-50/30 p-2.5 rounded-lg border border-slate-100">
-                            {log.customerIssue || "No ticket content recorded."}
-                          </div>
-                        </div>
-
-                        {/* AI Recommendation Card */}
-                        <div className="flex flex-col gap-1.5 bg-white p-4.5 rounded-xl border border-slate-200/60 shadow-2xs relative">
-                          <span className="text-[10px] font-extrabold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-                            <Sparkles size={11} className="text-indigo-400" />
-                            AI Suggested Reply / Resolution Path
-                          </span>
-                          <div className="text-xs text-slate-700 leading-relaxed max-h-[160px] overflow-y-auto whitespace-pre-wrap pr-1 font-medium bg-indigo-50/5 p-2.5 rounded-lg border border-indigo-100/40">
-                            {log.aiRecommendation || "No recommendation content recorded."}
-                          </div>
-                          
-                          {log.aiRecommendation && (
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(log.aiRecommendation);
-                              }}
-                              className="absolute top-4 right-4 flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer border border-indigo-100"
-                            >
-                              <ArrowUpRight size={10} />
-                              Copy Text
-                            </button>
-                          )}
-                        </div>
-
-                      </div>
-
-                    </div>
-                  )}
                 </div>
               );
             })}
