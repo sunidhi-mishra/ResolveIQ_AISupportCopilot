@@ -30,6 +30,7 @@ export default function Home() {
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
+  const [analyzedText, setAnalyzedText] = useState('');
 
   // Analysis ID State Tracking
   const [nextAnalysisId, setNextAnalysisId] = useState(125);
@@ -129,6 +130,7 @@ export default function Home() {
 
       // Bind data
       setAnalysisResult(data);
+      setAnalyzedText(ticketText);
       setSuggestedResponseText(variations.empathy);
       setActiveTone('empathy');
       
@@ -197,6 +199,7 @@ export default function Home() {
     setTicketText('');
     setSelectedPresetId(null);
     setAnalysisResult(null);
+    setAnalyzedText('');
     setResponseVariations(null);
     setSuggestedResponseText('');
     setIsEditingResponse(false);
@@ -450,6 +453,7 @@ export default function Home() {
             onReject={handleRejectRecommendation}
             isEditingResponse={isEditingResponse}
             lastAgentAction={lastAgentAction}
+            analyzedText={analyzedText}
           />
 
         </main>

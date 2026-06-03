@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnalysisResponse, EscalationType } from '@/lib/types';
-import { Shield, Sparkles, AlertCircle, ArrowUpRight, CheckCircle2, UserCheck, ShieldAlert, XCircle } from 'lucide-react';
+import { Shield, Sparkles, AlertCircle, ArrowUpRight, CheckCircle2, UserCheck, ShieldAlert, XCircle, Check, X, ShieldCheck } from 'lucide-react';
+import { evaluateEscalationRules } from '@/lib/escalationEngine';
 
 interface RightPanelProps {
   isLoading: boolean;
@@ -11,6 +12,7 @@ interface RightPanelProps {
   onReject: () => void;
   isEditingResponse: boolean;
   lastAgentAction: string | null;
+  analyzedText: string;
 }
 
 export default function RightPanel({
@@ -22,6 +24,7 @@ export default function RightPanel({
   onReject,
   isEditingResponse,
   lastAgentAction,
+  analyzedText,
 }: RightPanelProps) {
 
   // helper for progress bar colors
@@ -128,7 +131,14 @@ export default function RightPanel({
     }
   };
 
-  const escConfig = getEscalationStyle(analysisResult.escalation);
+  const engineResult = evaluateEscalationRules(
+    analyzedText || '',
+    analysisResult.category,
+    analysisResult.priority,
+    analysisResult.sentiment
+  );
+
+  const escConfig = getEscalationStyle(engineResult.calculatedEscalation);
 
   const confidenceItems = [
     { label: 'Category Confidence', val: analysisResult.categoryConfidence },
@@ -218,27 +228,78 @@ export default function RightPanel({
       </div>
 
       {/* Escalation Recommendation Card */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:border-slate-350 transition-all duration-200">
-        <div className="flex items-center gap-2 mb-3">
-          <AlertCircle size={16} className="text-slate-500" />
-          <h3 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
-            Escalation Recommendation
-          </h3>
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:border-slate-350 transition-all duration-200 flex flex-col gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1 select-none">
+            <AlertCircle size={16} className="text-slate-500" />
+            <h3 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+              Escalation Recommendation
+            </h3>
+          </div>
+          <p className="text-[10px] text-slate-400 font-medium">
+            Determined by rules engine evaluating incoming ticket criteria.
+          </p>
         </div>
         
+        {/* Recommendation badge & reason box */}
         <div className={`flex items-start gap-3 p-4 rounded-xl border ${escConfig.bgColor}`}>
           <div className="mt-0.5 flex-shrink-0">
             {escConfig.icon}
           </div>
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-bold text-slate-800">
-              {analysisResult.escalation}
+              {engineResult.calculatedEscalation}
             </span>
-            <p className="text-[11px] leading-relaxed text-slate-500 font-medium select-text">
-              {analysisResult.escalationReason}
+            <p className="text-[11px] leading-relaxed text-slate-500 font-semibold select-text">
+              {engineResult.justification}
             </p>
           </div>
         </div>
+
+        {/* Divider */}
+        <div className="border-t border-slate-100 my-1" />
+
+        {/* Triggers Breakdown */}
+        <div>
+          <div className="flex items-center gap-2 mb-3 select-none">
+            <ShieldCheck size={14} className="text-indigo-500" />
+            <h4 className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+              Rules Engine Triggers
+            </h4>
+          </div>
+
+          <div className="flex flex-col gap-3 max-h-[220px] overflow-y-auto pr-1">
+            {engineResult.triggers.map((trigger, idx) => (
+              <div key={idx} className="flex flex-col gap-1 text-[11px] leading-normal">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                    {trigger.triggered ? (
+                      <Check size={13} className="text-emerald-500 stroke-[3]" />
+                    ) : (
+                      <X size={13} className="text-slate-350 stroke-[3]" />
+                    )}
+                    <span className={trigger.triggered ? 'text-slate-850' : 'text-slate-500'}>
+                      {trigger.name}
+                    </span>
+                  </div>
+                  <span className={`text-[8px] font-black px-1.5 py-0.2 rounded-md uppercase tracking-wider border select-none ${
+                    trigger.triggered
+                      ? 'bg-rose-50 border-rose-100 text-rose-600'
+                      : 'bg-slate-50 border-slate-150 text-slate-400'
+                  }`}>
+                    {trigger.triggered ? 'Triggered' : 'Not Triggered'}
+                  </span>
+                </div>
+                <p className={`pl-4.5 text-[10px] font-semibold leading-snug ${
+                  trigger.triggered ? 'text-slate-500' : 'text-slate-400'
+                }`}>
+                  {trigger.explanation}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
       </div>
 
       {/* Agent Actions */}
