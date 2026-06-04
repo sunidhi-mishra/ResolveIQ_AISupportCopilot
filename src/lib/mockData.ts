@@ -15,7 +15,11 @@ export const DEFAULT_MOCK_RESPONSE: AnalysisResponse = {
   categoryConfidence: 92,
   priorityConfidence: 81,
   sentimentConfidence: 84,
-  responseConfidence: 78
+  responseConfidence: 78,
+  categoryConfidenceReasoning: "Battery, charging, and hardware-related terms strongly indicate a hardware support issue.",
+  priorityConfidenceReasoning: "Device functionality is impacted but no safety risk is present.",
+  sentimentConfidenceReasoning: "Customer uses terms indicating mild frustration but is not overly hostile.",
+  responseConfidenceReasoning: "Diagnostics guidelines address the reported battery drain issue directly."
 };
 
 export interface PresetTicket {
@@ -288,6 +292,49 @@ export function getMockAnalysis(text: string): AnalysisResponse {
     escalationReason = "General customer inquiry. Standard response templates apply.";
   }
 
+  let categoryConfidenceReasoning = "";
+  let priorityConfidenceReasoning = "";
+  let sentimentConfidenceReasoning = "";
+  let responseConfidenceReasoning = "";
+
+  if (category === "Hardware Support") {
+    categoryConfidenceReasoning = "Battery, charging, and hardware-related terms strongly indicate a hardware support issue.";
+  } else if (category === "Account Access") {
+    categoryConfidenceReasoning = "Access controls, credentials, and lockout language indicate an account security issue.";
+  } else if (category === "Payment Issue") {
+    categoryConfidenceReasoning = "Refunds, charges, billing, and transactional language indicate a billing issue.";
+  } else if (category === "Delivery Issue") {
+    categoryConfidenceReasoning = "Tracking, package, delivery, and shipment details indicate order fulfillment tracking.";
+  } else if (category === "Software Support") {
+    categoryConfidenceReasoning = "Application freezes, crashes, and software version references indicate software support.";
+  } else {
+    categoryConfidenceReasoning = "Vague or general terms fall back to general support classification.";
+  }
+
+  if (priority === "High") {
+    priorityConfidenceReasoning = "Critical blocking issue (lockout, billing error, or crash) requires expedited attention.";
+  } else if (priority === "Medium") {
+    priorityConfidenceReasoning = "Functional degradation present but standard workarounds are available.";
+  } else {
+    priorityConfidenceReasoning = "Routine informational request with no system disruption.";
+  }
+
+  if (sentiment === "Angry") {
+    sentimentConfidenceReasoning = "Use of explicit angry keywords or capitalization indicates customer frustration is severe.";
+  } else if (sentiment === "Frustrated") {
+    sentimentConfidenceReasoning = "Mild friction reported, indicating minor frustration and system blockages.";
+  } else if (sentiment === "Satisfied") {
+    sentimentConfidenceReasoning = "Client expresses gratitude and positive feedback.";
+  } else {
+    sentimentConfidenceReasoning = "Objective issue report with minimal emotional markers.";
+  }
+
+  if (category === "Hardware Support" || category === "Account Access" || category === "Payment Issue") {
+    responseConfidenceReasoning = "Standard diagnostics, unlock, or billing refund procedures address this ticket directly.";
+  } else {
+    responseConfidenceReasoning = "General resolution or troubleshooting tips drafted for standard guidance.";
+  }
+
   return {
     summary: text.length > 80 ? text.substring(0, 80) + '...' : text,
     category,
@@ -302,7 +349,11 @@ export function getMockAnalysis(text: string): AnalysisResponse {
     categoryConfidence,
     priorityConfidence,
     sentimentConfidence,
-    responseConfidence
+    responseConfidence,
+    categoryConfidenceReasoning,
+    priorityConfidenceReasoning,
+    sentimentConfidenceReasoning,
+    responseConfidenceReasoning
   };
 }
 

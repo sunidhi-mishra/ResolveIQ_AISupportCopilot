@@ -137,10 +137,14 @@ export default function Home() {
           ? (rawData.escalation.team === 'Specialist Team' ? 'Escalate to Specialist Team' : 'Escalate to Tier 2')
           : 'No Escalation Required',
         escalationReason: rawData.escalation?.reason || '',
-        categoryConfidence: rawData.confidence?.category ?? 80,
-        priorityConfidence: rawData.confidence?.priority ?? 80,
-        sentimentConfidence: rawData.confidence?.sentiment ?? 80,
-        responseConfidence: rawData.confidence?.response ?? 80,
+        categoryConfidence: rawData.confidence_signals?.category_confidence ?? 80,
+        priorityConfidence: rawData.confidence_signals?.priority_confidence ?? 80,
+        sentimentConfidence: rawData.confidence_signals?.sentiment_confidence ?? 80,
+        responseConfidence: rawData.confidence_signals?.response_confidence ?? 80,
+        categoryConfidenceReasoning: rawData.confidence_reasoning?.category || 'Category confidence based on keyword matches.',
+        priorityConfidenceReasoning: rawData.confidence_reasoning?.priority || 'Priority confidence based on operational impact indicators.',
+        sentimentConfidenceReasoning: rawData.confidence_reasoning?.sentiment || 'Sentiment confidence based on emotional markers analysis.',
+        responseConfidenceReasoning: rawData.confidence_reasoning?.response || 'Response quality confidence matching draft templates.',
       };
       
       // Calculate simple tone variations dynamically

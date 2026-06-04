@@ -32,6 +32,10 @@ export interface AnalysisResponse {
   priorityConfidence: number;
   sentimentConfidence: number;
   responseConfidence: number;
+  categoryConfidenceReasoning: string;
+  priorityConfidenceReasoning: string;
+  sentimentConfidenceReasoning: string;
+  responseConfidenceReasoning: string;
 }
 
 export interface ActionLog {

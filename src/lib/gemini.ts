@@ -43,27 +43,27 @@ const analysisSchema = {
       type: Type.STRING,
       description: "A professional support agent response draft addressing the customer query.",
     },
-    confidence: {
+    confidence_signals: {
       type: Type.OBJECT,
       properties: {
-        category: {
+        category_confidence: {
           type: Type.INTEGER,
           description: "Confidence percentage (1-100) in the category classification.",
         },
-        priority: {
+        priority_confidence: {
           type: Type.INTEGER,
           description: "Confidence percentage (1-100) in the priority assignment.",
         },
-        sentiment: {
+        sentiment_confidence: {
           type: Type.INTEGER,
           description: "Confidence percentage (1-100) in the sentiment detection.",
         },
-        response: {
+        response_confidence: {
           type: Type.INTEGER,
           description: "Confidence percentage (1-100) in the suggested response quality.",
         }
       },
-      required: ["category", "priority", "sentiment", "response"]
+      required: ["category_confidence", "priority_confidence", "sentiment_confidence", "response_confidence"]
     },
     reasoning: {
       type: Type.OBJECT,
@@ -82,6 +82,28 @@ const analysisSchema = {
         }
       },
       required: ["category", "priority", "sentiment"]
+    },
+    confidence_reasoning: {
+      type: Type.OBJECT,
+      properties: {
+        category: {
+          type: Type.STRING,
+          description: "Explanation of why this category confidence value was assigned.",
+        },
+        priority: {
+          type: Type.STRING,
+          description: "Explanation of why this priority confidence value was assigned.",
+        },
+        sentiment: {
+          type: Type.STRING,
+          description: "Explanation of why this sentiment confidence value was assigned.",
+        },
+        response: {
+          type: Type.STRING,
+          description: "Explanation of why this response confidence value was assigned.",
+        }
+      },
+      required: ["category", "priority", "sentiment", "response"]
     },
     escalation: {
       type: Type.OBJECT,
@@ -108,8 +130,9 @@ const analysisSchema = {
     "priority",
     "sentiment",
     "suggested_response",
-    "confidence",
+    "confidence_signals",
     "reasoning",
+    "confidence_reasoning",
     "escalation"
   ]
 };
@@ -120,16 +143,22 @@ export interface GeminiAnalysisResult {
   priority: string;
   sentiment: string;
   suggested_response: string;
-  confidence: {
-    category: number;
-    priority: number;
-    sentiment: number;
-    response: number;
+  confidence_signals: {
+    category_confidence: number;
+    priority_confidence: number;
+    sentiment_confidence: number;
+    response_confidence: number;
   };
   reasoning: {
     category: string;
     priority: string;
     sentiment: string;
+  };
+  confidence_reasoning: {
+    category: string;
+    priority: string;
+    sentiment: string;
+    response: string;
   };
   escalation: {
     recommended: boolean;
@@ -149,16 +178,22 @@ export function isValidGeminiAnalysisResult(data: any): data is GeminiAnalysisRe
   if (typeof data.sentiment !== 'string') return false;
   if (typeof data.suggested_response !== 'string') return false;
   
-  if (!data.confidence || typeof data.confidence !== 'object') return false;
-  if (typeof data.confidence.category !== 'number') return false;
-  if (typeof data.confidence.priority !== 'number') return false;
-  if (typeof data.confidence.sentiment !== 'number') return false;
-  if (typeof data.confidence.response !== 'number') return false;
+  if (!data.confidence_signals || typeof data.confidence_signals !== 'object') return false;
+  if (typeof data.confidence_signals.category_confidence !== 'number') return false;
+  if (typeof data.confidence_signals.priority_confidence !== 'number') return false;
+  if (typeof data.confidence_signals.sentiment_confidence !== 'number') return false;
+  if (typeof data.confidence_signals.response_confidence !== 'number') return false;
 
   if (!data.reasoning || typeof data.reasoning !== 'object') return false;
   if (typeof data.reasoning.category !== 'string') return false;
   if (typeof data.reasoning.priority !== 'string') return false;
   if (typeof data.reasoning.sentiment !== 'string') return false;
+
+  if (!data.confidence_reasoning || typeof data.confidence_reasoning !== 'object') return false;
+  if (typeof data.confidence_reasoning.category !== 'string') return false;
+  if (typeof data.confidence_reasoning.priority !== 'string') return false;
+  if (typeof data.confidence_reasoning.sentiment !== 'string') return false;
+  if (typeof data.confidence_reasoning.response !== 'string') return false;
 
   if (!data.escalation || typeof data.escalation !== 'object') return false;
   if (typeof data.escalation.recommended !== 'boolean') return false;
@@ -187,16 +222,22 @@ export function getStructuredFallbackResponse(ticketText: string): GeminiAnalysi
     priority: oldMock.priority,
     sentiment: oldMock.sentiment,
     suggested_response: oldMock.suggestedResponse,
-    confidence: {
-      category: oldMock.categoryConfidence,
-      priority: oldMock.priorityConfidence,
-      sentiment: oldMock.sentimentConfidence,
-      response: oldMock.responseConfidence
+    confidence_signals: {
+      category_confidence: oldMock.categoryConfidence,
+      priority_confidence: oldMock.priorityConfidence,
+      sentiment_confidence: oldMock.sentimentConfidence,
+      response_confidence: oldMock.responseConfidence
     },
     reasoning: {
       category: oldMock.categoryReason,
       priority: oldMock.priorityReason,
       sentiment: oldMock.sentimentReason
+    },
+    confidence_reasoning: {
+      category: oldMock.categoryConfidenceReasoning,
+      priority: oldMock.priorityConfidenceReasoning,
+      sentiment: oldMock.sentimentConfidenceReasoning,
+      response: oldMock.responseConfidenceReasoning
     },
     escalation: {
       recommended: isEscalated,
@@ -237,6 +278,7 @@ Tasks:
 * Identify customer sentiment
 * Draft a professional support response
 * Explain classification decisions
+* Explain confidence reasoning for all metrics
 * Recommend escalation when appropriate
 
 Categories:
@@ -268,6 +310,14 @@ Escalate when:
 * security concerns exist
 * repeated unresolved complaints exist
 * confidence is low
+
+Confidence Guidelines:
+* Provide confidence values from 0 to 100.
+* Confidence must reflect certainty based on ticket information.
+* Do not generate arbitrary numbers.
+* Lower confidence when ticket details are incomplete.
+* Lower confidence when multiple interpretations are possible.
+* Higher confidence when category and issue type are clear.
 
 Return JSON only.
 

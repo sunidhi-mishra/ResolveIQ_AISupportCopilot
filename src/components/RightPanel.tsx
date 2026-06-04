@@ -141,10 +141,10 @@ export default function RightPanel({
   const escConfig = getEscalationStyle(engineResult.calculatedEscalation);
 
   const confidenceItems = [
-    { label: 'Category Confidence', val: analysisResult.categoryConfidence },
-    { label: 'Priority Confidence', val: analysisResult.priorityConfidence },
-    { label: 'Sentiment Confidence', val: analysisResult.sentimentConfidence },
-    { label: 'Response Confidence', val: analysisResult.responseConfidence },
+    { label: 'Category Confidence', val: analysisResult.categoryConfidence, reason: analysisResult.categoryConfidenceReasoning },
+    { label: 'Priority Confidence', val: analysisResult.priorityConfidence, reason: analysisResult.priorityConfidenceReasoning },
+    { label: 'Sentiment Confidence', val: analysisResult.sentimentConfidence, reason: analysisResult.sentimentConfidenceReasoning },
+    { label: 'Response Confidence', val: analysisResult.responseConfidence, reason: analysisResult.responseConfidenceReasoning },
   ];
 
   // SVG Progress circle parameters
@@ -206,12 +206,12 @@ export default function RightPanel({
         <div className="border-t border-slate-100 my-4" />
 
         {/* Component progress bars list */}
-        <div className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-4">
           {confidenceItems.map((item, idx) => (
-            <div key={idx} className="flex flex-col gap-1">
+            <div key={idx} className="flex flex-col gap-1.5">
               <div className="flex justify-between text-[11px] font-semibold text-slate-600">
                 <span>{item.label}</span>
-                <span className="font-bold text-slate-750 select-all">{item.val}%</span>
+                <span className="font-bold text-slate-755 select-all">{item.val}%</span>
               </div>
               <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden select-none">
                 <div
@@ -222,6 +222,11 @@ export default function RightPanel({
                   }}
                 />
               </div>
+              {item.reason && (
+                <p className="text-[10px] leading-relaxed text-slate-450 font-medium pl-0.5 select-text">
+                  {item.reason}
+                </p>
+              )}
             </div>
           ))}
         </div>
